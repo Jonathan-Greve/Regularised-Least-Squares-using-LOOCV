@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import misc
 
+#Non-regularised Linear Regression
 def multivarlinreg(X, y):
     step1 = np.linalg.inv(np.dot(np.transpose(X), X)) # (D+1)xN * Nx(D+1) --> (D+1)x(D+1)
     step2 = np.dot(step1, np.transpose(X))            # (D+1)x(D+1) * (D+1)xN --> (D+1)xN
@@ -10,6 +11,7 @@ def multivarlinreg(X, y):
     wOut = np.transpose(step3)                        # (D+1)x1
     return wOut
 
+#Regularised Linear Regression
 def Regmultivarlinreg(X, y,lam):
     #step1 = np.linalg.inv(np.dot(np.transpose(X), X)+np.dot(np.identity(len(X[1])),len(X[1])*lam))
     #step2 = np.dot(step1, np.transpose(X))
@@ -23,21 +25,30 @@ def Regmultivarlinreg(X, y,lam):
     wOut = np.transpose(solved)
     return wOut
 
+#Leave One Out Cross Validation
+def LOOCV (X,t,lam):
+    X = np.c_[np.ones(len(X)), X]
+    LOOL = 0
+    for i in range(0,len(X)):
+        XTemp = np.delete(X,i,0)
+        tTemp = np.delete(t,i,0)
+        w = Regmultivarlinreg(XTemp,tTemp,lam)
+        LOOL += (t[i]-np.dot(np.transpose(w),X[i]))**2
+    return LOOL/len(X)
 
+#------------------------------------------------------------
+#Below is an example, using the .txt file
+#------------------------------------------------------------
 data = np.genfromtxt('men-olympics-100.txt', delimiter=' ')
 
+X = data[:,0]                #Get the first column in the matrix (input)
+XSq = np.c_[X,X**2]          #Add another column, 2nd power of 1st column
+XThree = np.c_[XSq,X**3]     #Add another column, 3rd power of 1st column
+XFour = np.c_[XThree,X**4]   #Add another column, 3rd power of 1st column
+t = data[:,1]                #Get the second column in the matrix (output)
 
-X = data[:,0]
-XSq = np.c_[X,X**2]
-XThree = np.c_[XSq,X**3]
-XFour = np.c_[XThree,X**4]
-print(XFour)
-t = data[:,1]
-print(t.shape)
-print(X.shape)
-
-print(multivarlinreg(np.c_[np.ones(len(X)), X],t))
-print("lol")
+print("1st degree weights with lambda = 0:")
+print(Regmultivarlinreg(np.c_[np.ones(len(X)), X],t,0))
 j=(np.arange(1896., 2012, 1))
 plt.plot(j, 3.64164559e+01 -1.33308857e-02*j, lw=2, label='Fitted polynomial')
 plt.plot(X,t)
@@ -49,6 +60,7 @@ plt.scatter(X,t, label='Data points', color='k')
 plt.legend(loc='upper right')
 plt.show()
 
+print("4th degree weights with lambda = 0, 1, 0.0001156397, respectively:")
 print(multivarlinreg(np.c_[np.ones(len(XFour)), XFour],t))
 print(Regmultivarlinreg(np.c_[np.ones(len(XFour)), XFour],t,1))
 print(Regmultivarlinreg(np.c_[np.ones(len(XFour)), XFour],t,0.0001156397))
@@ -63,24 +75,18 @@ plt.plot(X,t, label='Data points connected', color='k')
 plt.scatter(X,t, label='Data points', color='k')
 plt.ylim([9.5,12.1])
 plt.legend(loc='upper right')
-
 plt.show()
 
-def LOOCV (X,t,lam):
-    X = np.c_[np.ones(len(X)), X]
-    LOOL = 0
-    for i in range(0,len(X)):
-        XTemp = np.delete(X,i,0)
-        tTemp = np.delete(t,i,0)
-        w = Regmultivarlinreg(XTemp,tTemp,lam)
-        LOOL += (t[i]-np.dot(np.transpose(w),X[i]))**2
-    return LOOL/len(X)
-
+#------------------------------------------------------------
+#1st Degree Polynomial - lambda in [0,1]
+#------------------------------------------------------------
+#Calculated the LOOCV loss for various lambda
 lam = (np.arange(0., 1, 0.001))
 x_out = []
 for i in range(0,len(lam)):
     x_out.append(LOOCV(X,t,lam[i]))
 
+#Plot of LOOCV loss vs lambda
 plt.plot(lam,x_out)
 plt.ylim([-0.01,0.6])
 plt.xlim([-0.01,1.05])
@@ -88,15 +94,19 @@ plt.title('LOOCV(lambda)')
 plt.ylabel('LOOCV')
 plt.xlabel('Lambda')
 plt.show()
-print(LOOCV(X,t,0))
 
+#------------------------------------------------------------
+#4st Degree Polynomial - lambda in [0,1]
+#------------------------------------------------------------
+#Calculated the LOOCV loss for various lambda
 lam = (np.arange(0., 1, 0.001))
-x_out = []
 output = []
 for i in range(0,len(lam)):
     temp = LOOCV(XFour,t,lam[i])
     output.append([lam[i], temp])
 output = np.asarray(output)
+
+#Plot of LOOCV loss vs lambda
 plt.plot(output[:,0],output[:,1])
 plt.ylim([0.054,0.06])
 plt.xlim([-0.01,1.01])
@@ -104,16 +114,19 @@ plt.title('LOOCV(lambda)')
 plt.ylabel('LOOCV')
 plt.xlabel('Lambda')
 plt.show()
-print(LOOCV(XFour,t,0.1))
-print(LOOCV(XFour,t,0.000000000001))
 
+#------------------------------------------------------------
+#4st Degree Polynomial - lambda in [0,001]
+#------------------------------------------------------------
+#Calculated the LOOCV loss for various lambda
 lam = (np.arange(0.0, 0.001, 0.00001))
-x_out = []
 output = []
 for i in range(0,len(lam)):
     temp = LOOCV(XFour,t,lam[i])
     output.append([lam[i], temp])
 output = np.asarray(output)
+
+#Plot of LOOCV loss vs lambda
 plt.plot(output[:,0],output[:,1])
 plt.ylim([0.050,0.06])
 plt.xlim([-0.00001,00.00101])
@@ -121,8 +134,3 @@ plt.title('LOOCV(lambda)')
 plt.ylabel('LOOCV')
 plt.xlabel('Lambda')
 plt.show()
-print(LOOCV(XFour,t,0.1))
-print(LOOCV(XFour,t,0.00000000001))
-print(np.amin(output[:,1]))
-print(np.argmin(output[:,1]))
-print(output[:,0][(np.argmin(output[:,1]))])
